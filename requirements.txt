@@ -1,8 +1,9 @@
 pefile 
 capstone              
 speakeasy-emulator           
-ctf-toolkit
+ctf_toolkit @ git+https://github.com/Wang-SecurityResearch/ctf_toolkit.git
 google-generativeai          
 triton-library               
 angr
+
 pyyaml
