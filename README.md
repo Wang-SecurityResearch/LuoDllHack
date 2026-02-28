@@ -41,7 +41,7 @@ cd LuoDllHack
 pip install -r requirements.txt
 
 # Or manually install
-pip install ctf-toolkit
+pip install git+https://github.com/Wang-SecurityResearch/ctf_toolkit.git
 pip install pefile capstone              # Mandatory
 pip install speakeasy-emulator           # Dynamic verification (Recommended)
 pip install google-generativeai          # AI analysis (Optional)
@@ -774,3 +774,4 @@ This project is for security research and authorized penetration testing only. U
 - [Capstone](https://www.capstone-engine.org/) - Disassembly framework.
 - [Speakeasy](https://github.com/mandiant/speakeasy) - Windows emulator.
 - [Google Gemini](https://ai.google.dev/) - AI capability support.
+
