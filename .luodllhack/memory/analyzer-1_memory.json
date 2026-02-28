@@ -1,0 +1,135 @@
+{
+  "successful_patterns": [
+    {
+      "timestamp": 1767203383.2462673,
+      "task_type": "scan_dangerous_imports",
+      "parameters": {
+        "max_apis": 20
+      },
+      "result_summary": {
+        "success": true,
+        "findings_count": 8,
+        "execution_time": 0.0006239414215087891,
+        "error": null
+      },
+      "success": true,
+      "tags": [
+        "scan_dangerous_imports",
+        "success"
+      ],
+      "metadata": {
+        "total_imports": 91,
+        "dangerous_count": 8,
+        "findings_count": 8
+      }
+    },
+    {
+      "timestamp": 1767203383.248276,
+      "task_type": "find_attack_surface",
+      "parameters": {},
+      "result_summary": {
+        "success": true,
+        "findings_count": 0,
+        "execution_time": 0.002008676528930664,
+        "error": null
+      },
+      "success": true,
+      "tags": [
+        "find_attack_surface",
+        "success"
+      ],
+      "metadata": {
+        "vectors_found": 8
+      }
+    },
+    {
+      "timestamp": 1767203383.3365598,
+      "task_type": "analyze_exports",
+      "parameters": {
+        "exports": {
+          "DllCanUnloadNow": 268469452,
+          "DllGetClassObject": 268470404,
+          "DllRegisterServer": 268470128,
+          "DllUnregisterServer": 268470156
+        }
+      },
+      "result_summary": {
+        "success": true,
+        "findings_count": 0,
+        "execution_time": 0.08828377723693848,
+        "error": null
+      },
+      "success": true,
+      "tags": [
+        "analyze_exports",
+        "success"
+      ],
+      "metadata": {
+        "exports_analyzed": 4,
+        "findings_count": 0
+      }
+    }
+  ],
+  "failure_patterns": [],
+  "tool_usage_stats": {},
+  "learned_heuristics": [],
+  "false_positive_features": [],
+  "true_positive_features": [
+    {
+      "vuln_type": "DOUBLE_FREE",
+      "severity": "Critical",
+      "confidence": 0.7,
+      "description": "TP pattern: DOUBLE_FREE",
+      "timestamp": 1767203383.2462673
+    },
+    {
+      "vuln_type": "BUFFER_OVERFLOW",
+      "severity": "High",
+      "confidence": 0.5,
+      "description": "TP pattern: BUFFER_OVERFLOW",
+      "timestamp": 1767203383.2462673
+    },
+    {
+      "vuln_type": "DOUBLE_FREE",
+      "severity": "Critical",
+      "confidence": 0.7,
+      "description": "TP pattern: DOUBLE_FREE",
+      "timestamp": 1767203383.2462673
+    },
+    {
+      "vuln_type": "BUFFER_OVERFLOW",
+      "severity": "Critical",
+      "confidence": 0.7,
+      "description": "TP pattern: BUFFER_OVERFLOW",
+      "timestamp": 1767203383.2462673
+    },
+    {
+      "vuln_type": "COMMAND_INJECTION",
+      "severity": "Critical",
+      "confidence": 0.7,
+      "description": "TP pattern: COMMAND_INJECTION",
+      "timestamp": 1767203383.2462673
+    },
+    {
+      "vuln_type": "BUFFER_OVERFLOW",
+      "severity": "Critical",
+      "confidence": 0.7,
+      "description": "TP pattern: BUFFER_OVERFLOW",
+      "timestamp": 1767203383.2462673
+    },
+    {
+      "vuln_type": "COMMAND_INJECTION",
+      "severity": "Critical",
+      "confidence": 0.7,
+      "description": "TP pattern: COMMAND_INJECTION",
+      "timestamp": 1767203383.2462673
+    },
+    {
+      "vuln_type": "DOUBLE_FREE",
+      "severity": "Critical",
+      "confidence": 0.7,
+      "description": "TP pattern: DOUBLE_FREE",
+      "timestamp": 1767203383.2462673
+    }
+  ]
+}

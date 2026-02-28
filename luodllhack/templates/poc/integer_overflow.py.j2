@@ -1,0 +1,114 @@
+{% extends "poc/base.py.j2" %}
+
+{% block description %}Integer overflow vulnerability{% endblock %}
+
+{% block config %}
+# 函数签名信息
+ARG_COUNT = {{ arg_count or 1 }}
+{% if args_info %}
+ARGS_INFO = {{ args_info }}
+{% else %}
+ARGS_INFO = []
+{% endif %}
+{% endblock %}
+
+{% block payload %}
+# Integer overflow test values (32-bit and 64-bit)
+OVERFLOW_VALUES_32 = [
+    (0x7FFFFFFF, "INT32_MAX"),
+    (0x80000000, "INT32_MIN as unsigned"),
+    (0xFFFFFFFF, "UINT32_MAX"),
+    (0x7FFFFFFF + 1, "INT32_MAX + 1"),
+    (0xFFFFFFFF + 1, "UINT32_MAX + 1 (wrap)"),
+    (-1, "Negative (-1)"),
+    (0, "Zero"),
+]
+
+OVERFLOW_VALUES_64 = [
+    (0x7FFFFFFFFFFFFFFF, "INT64_MAX"),
+    (0x8000000000000000, "INT64_MIN as unsigned"),
+    (0xFFFFFFFFFFFFFFFF, "UINT64_MAX"),
+    (0xFFFFFFFF + 1, "UINT32_MAX + 1"),
+    (0xFFFFFFFF + 2, "UINT32_MAX + 2"),
+]
+
+# 根据架构选择测试值
+if sys.maxsize > 2**32:
+    OVERFLOW_VALUES = OVERFLOW_VALUES_32 + OVERFLOW_VALUES_64
+else:
+    OVERFLOW_VALUES = OVERFLOW_VALUES_32
+{% endblock %}
+
+{% block exploit_doc %}Execute integer overflow exploit{% endblock %}
+
+{% block exploit_body %}
+        print(f"[*] Sink API: {{ sink_api }}")
+{% if arg_count and arg_count > 1 %}
+        print(f"[*] Function signature: {{ arg_count }} arguments{% if args_info %}, {{ args_info|length }} typed{% endif %}")
+{% endif %}
+
+        # 为指针参数分配有效内存
+        buffers = []
+        for i in range({{ arg_count or 4 }}):
+            buf = ctypes.create_string_buffer(1024)
+            buffers.append(buf)
+
+        def build_args(test_val, test_arg_idx=0):
+            """构建函数调用参数，在指定位置插入测试值"""
+            args = []
+{% if args_info %}
+            # 使用签名信息构建参数
+            for i, arg_info in enumerate(ARGS_INFO):
+                is_ptr = arg_info.get('is_pointer', False) or '*' in arg_info.get('type', '')
+                if i == test_arg_idx:
+                    # 这是要测试的整数参数
+                    args.append(ctypes.c_int64(test_val))
+                elif is_ptr:
+                    # 指针参数 - 传递有效缓冲区
+                    args.append(ctypes.cast(buffers[i % len(buffers)], ctypes.c_void_p))
+                else:
+                    # 其他整数参数 - 使用安全值
+                    args.append(ctypes.c_int64(0))
+{% else %}
+            # 没有签名信息，使用启发式方法
+            for i in range({{ arg_count or 1 }}):
+                if i == test_arg_idx:
+                    args.append(ctypes.c_int64(test_val))
+                else:
+                    # 默认传递缓冲区指针（更安全）
+                    args.append(ctypes.cast(buffers[i % len(buffers)], ctypes.c_void_p))
+{% endif %}
+            return args
+
+        # 找出整数参数位置（非指针参数）
+        int_arg_indices = []
+{% if args_info %}
+        for i, arg_info in enumerate(ARGS_INFO):
+            is_ptr = arg_info.get('is_pointer', False) or '*' in arg_info.get('type', '')
+            if not is_ptr:
+                int_arg_indices.append(i)
+{% else %}
+        # 没有签名信息，假设第一个参数是整数
+        int_arg_indices = [0]
+{% endif %}
+
+        if not int_arg_indices:
+            print("[!] No integer arguments found, testing first argument")
+            int_arg_indices = [0]
+
+        # 对每个整数参数位置测试溢出值
+        for arg_idx in int_arg_indices:
+            print(f"\n[*] Testing argument {arg_idx}:")
+            for val, desc in OVERFLOW_VALUES:
+                print(f"\n[*] Testing: 0x{val:x} ({desc})")
+                try:
+                    args = build_args(val, arg_idx)
+                    result = func(*args)
+                    print(f"    -> Returned: {result}")
+                except OSError as e:
+                    print(f"    -> Windows Error: {e}")
+                except Exception as e:
+                    print(f"    -> Exception: {type(e).__name__}: {e}")
+
+        print("\n[+] All values tested")
+{% endblock %}

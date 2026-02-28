@@ -1,0 +1,221 @@
+# =============================================================================
+#                        LuoDllHack Configuration File v5.2
+# =============================================================================
+#
+# Usage:
+#   1. Copy: copy luodllhack.example.yaml luodllhack.yaml
+#   2. Modify configurations
+#   3. Run: python disasm_cli.py target.dll --hunt --config luodllhack.yaml
+#
+# Environment Variable Overrides:
+#   All configuration items support environment variable overrides: LUODLLHACK_<FIELD_NAME_UPPERCASE>
+#   Example: set LUODLLHACK_TAINT_MAX_DEPTH=5000
+#
+# =============================================================================
+
+
+# =============================================================================
+# Part 1: Core Analysis Engine
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# 1.1 Taint Analysis
+# -----------------------------------------------------------------------------
+taint_max_depth: 3000           # Maximum analysis depth (number of instructions)
+                                # - Small DLLs: 2000
+                                # - Large DLLs: 5000-10000
+taint_cross_function: true      # Cross-function analysis (Highly recommended)
+taint_track_memory: true        # Track taint propagation through memory
+
+# -----------------------------------------------------------------------------
+# 1.2 Symbolic Execution
+# -----------------------------------------------------------------------------
+symbolic_timeout: 600           # Timeout for single-path solving (seconds)
+symbolic_max_states: 500        # Maximum number of states (prevents state explosion)
+                                # - 100: Rapid scan
+                                # - 500: Balanced (Recommended)
+                                # - 1000+: Deep analysis
+symbolic_solve_constraints: true # Automatically solve constraints to generate trigger input
+
+# -----------------------------------------------------------------------------
+# 1.3 Memory Vulnerability Detection
+# -----------------------------------------------------------------------------
+memory_track_lifecycle: true    # Track pointer lifecycles
+memory_detect_uaf: true         # Detect Use-After-Free (CWE-416)
+memory_detect_double_free: true # Detect Double-Free (CWE-415)
+
+
+# =============================================================================
+# Part 2: Verification and Confidence
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# 2.1 Dynamic Verification (Speakeasy)
+# -----------------------------------------------------------------------------
+verify_enable_dynamic: true     # Enable dynamic verification (reduces false positives)
+verify_emulation_timeout: 60    # Emulation timeout (seconds)
+
+# -----------------------------------------------------------------------------
+# 2.2 Confidence Thresholds
+# -----------------------------------------------------------------------------
+confidence_min_threshold: 0.45  # Minimum confidence to report
+                                # - 0.30: Loose (more findings, more FPs)
+                                # - 0.45: Balanced (Recommended)
+                                # - 0.60: Strict (Production environment)
+
+# -----------------------------------------------------------------------------
+# 2.3 Confidence Weights (Advanced config, usually doesn't need modification)
+# -----------------------------------------------------------------------------
+confidence_weights:
+  taint_path_exists: 0.28       # Taint path exists
+  ai_confirmed: 0.15            # AI confirmation
+  dangerous_api_call: 0.15      # Dangerous API call
+  no_bounds_check: 0.12         # Missing bounds check
+  indirect_call_tainted: 0.08   # Tainted indirect call
+  user_input_direct: 0.07       # Direct flow from user input
+  cross_function: 0.06          # Cross-function propagation
+  arithmetic_overflow: 0.04     # Integer overflow
+  no_null_check: 0.03          # Missing NULL check
+  multiple_paths: 0.02         # Multiple paths reaching sink
+
+
+# =============================================================================
+# Part 3: AI Configuration
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# 3.1 LLM Backend Selection
+# -----------------------------------------------------------------------------
+ai_backend: "gemini"            # Backend: gemini | openai | ollama | anthropic
+
+# -----------------------------------------------------------------------------
+# 3.2 Gemini Configuration
+# -----------------------------------------------------------------------------
+# ai_api_key: ""                # API Key (Recommended to use environment variable GEMINI_API_KEY)
+ai_model: "gemini-2.0-flash"    # Model: gemini-2.0-flash | gemini-2.0-pro
+ai_max_tokens: 8192
+ai_temperature: 0.05            # Temperature (0.0-0.1 recommended)
+
+# -----------------------------------------------------------------------------
+# 3.3 OpenAI / Compatible API Configuration
+# -----------------------------------------------------------------------------
+# ai_openai_api_key: ""         # API Key (Recommended to use environment variable OPENAI_API_KEY)
+ai_openai_model: "gpt-4o"       # Model
+ai_openai_base_url: ""          # Custom API base URL (leave empty for official)
+                                # DeepSeek: https://api.deepseek.com/v1
+                                # Azure: https://xxx.openai.azure.com/
+
+# -----------------------------------------------------------------------------
+# 3.4 Ollama Configuration (Local Models)
+# -----------------------------------------------------------------------------
+ai_ollama_base_url: "http://localhost:11434"
+ai_ollama_model: "llama3"       # Recommended: codellama:34b, deepseek-coder:33b
+
+# -----------------------------------------------------------------------------
+# 3.5 Anthropic Configuration
+# -----------------------------------------------------------------------------
+# ai_anthropic_api_key: ""      # API Key (Recommended to use environment variable ANTHROPIC_API_KEY)
+ai_anthropic_model: "claude-3-opus-20240229"
+
+# -----------------------------------------------------------------------------
+# 3.6 Multi-Agent Collaboration Mode
+# -----------------------------------------------------------------------------
+ai_multi_agent: false           # Enable multi-agent (5 specialized Agents working in parallel)
+ai_multi_agent_workers: 4       # Parallel threads (Recommended = CPU core count)
+ai_agent_pool_size: 3           # LLM client pool size
+ai_agent_task_timeout: 120      # Timeout for single task (seconds)
+ai_agent_max_concurrent: 3      # Max concurrent tasks per Agent
+
+
+# =============================================================================
+# Part 4: Fuzzing Configuration
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# 4.1 Built-in Fuzzer
+# -----------------------------------------------------------------------------
+fuzz_enable: true               # Enable built-in fuzzing
+fuzz_iterations: 500            # Number of iterations
+fuzz_timeout: 5                 # Timeout for single run (seconds)
+
+# -----------------------------------------------------------------------------
+# 4.2 External Fuzzer (WinAFL / AFL / LibFuzzer)
+# -----------------------------------------------------------------------------
+fuzz_external_enable: false     # Enable external fuzzer
+fuzz_external_type: "winafl"    # Type: winafl | afl | libfuzzer
+fuzz_external_timeout: 60       # Run time (minutes)
+fuzz_generate_harness: true     # Automatically generate harness
+
+# WinAFL path (or set environment variable WINAFL_PATH)
+# fuzz_winafl_path: "C:\\Tools\\winafl"
+
+# DynamoRIO path (or set environment variable DYNAMORIO_PATH)
+# fuzz_dynamorio_path: "C:\\Tools\\DynamoRIO"
+
+# AFL++ path (or set environment variable AFL_PATH)
+# fuzz_afl_path: "/usr/local/bin/afl-fuzz"
+
+# Seed directory
+# fuzz_seeds_dir: "./seeds"
+
+# Output directory
+# fuzz_output_dir: "./fuzz_output"
+
+
+# =============================================================================
+# Part 5: Output Configuration
+# =============================================================================
+
+output_dir: "./output"          # Output directory
+output_poc: true                # Generate PoC code
+output_harness: true            # Generate Fuzzing Harness
+output_report: true             # Generate analysis report
+
+# -----------------------------------------------------------------------------
+# Logging
+# -----------------------------------------------------------------------------
+log_level: "INFO"               # DEBUG | INFO | WARNING | ERROR
+# log_file: "./luodllhack.log"      # Log file (log to console if not set)
+
+
+# =============================================================================
+# Preset Templates (Uncomment to use)
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# [Rapid Scan] - Large-scale batch scanning
+# -----------------------------------------------------------------------------
+# taint_max_depth: 1500
+# symbolic_max_states: 200
+# verify_emulation_timeout: 30
+# confidence_min_threshold: 0.50
+# ai_multi_agent: false
+
+# -----------------------------------------------------------------------------
+# [Deep Analysis] - Deep diving into critical targets
+# -----------------------------------------------------------------------------
+# taint_max_depth: 8000
+# symbolic_max_states: 1000
+# symbolic_timeout: 900
+# verify_emulation_timeout: 120
+# confidence_min_threshold: 0.35
+# ai_multi_agent: true
+# ai_multi_agent_workers: 8
+
+# -----------------------------------------------------------------------------
+# [Low False Positive] - Production environment
+# -----------------------------------------------------------------------------
+# confidence_min_threshold: 0.60
+# verify_enable_dynamic: true
+
+# -----------------------------------------------------------------------------
+# [Pure Algorithm] - No AI
+# -----------------------------------------------------------------------------
+# Command-line usage: --hunt --hunt-no-ai
+
+# -----------------------------------------------------------------------------
+# [Local Model] - Using Ollama
+# -----------------------------------------------------------------------------
+# ai_backend: "ollama"
+# ai_ollama_model: "codellama:34b"
+# ai_multi_agent: false

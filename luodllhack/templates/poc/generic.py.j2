@@ -1,0 +1,23 @@
+{% extends "poc/base.py.j2" %}
+
+{% block description %}{{ vuln_type }} vulnerability{% endblock %}
+
+{% block payload %}
+# Default payload (customize as needed)
+payload = b'A' * {{ payload_size | default(256) }}
+{% endblock %}
+
+{% block exploit_doc %}Execute generic PoC{% endblock %}
+
+{% block exploit_body %}
+        print(f"[*] Sink: {{ sink_api }}")
+        print(f"[*] Payload size: {len(payload)} bytes")
+{% if arg_count and arg_count > 1 %}
+        print(f"[*] Function takes {{ arg_count }} arguments")
+{% endif %}
+
+        print("[*] Triggering...")
+        args = arg_builder.build(payload, payload_arg_idx=0)
+        result = func(*args)
+        print(f"[+] Function returned: {result}")
+{% endblock %}

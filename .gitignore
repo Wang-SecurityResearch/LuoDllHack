@@ -1,0 +1,238 @@
+# ===================================================
+# FusedPen .gitignore
+# ===================================================
+
+# ===== 通用 =====
+.DS_Store
+Thumbs.db
+*.log
+*.local
+.env
+.env.local
+.env.*.local
+*.bak
+*.swp
+*~
+
+# ===== 前端 (Node.js / React / Vite) =====
+node_modules/
+dist/
+dist-ssr/
+*.tsbuildinfo
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+.npm/
+.yarn/
+.pnpm-store/
+
+# Vite
+*.local
+.vite/
+
+# ===== 后端 (Python) =====
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+pip-log.txt
+pip-delete-this-directory.txt
+
+# 虚拟环境
+venv/
+.venv/
+ENV/
+env/
+.env/
+env.bak/
+venv.bak/
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Pytest / 测试
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+nosetests.xml
+
+# mypy / 类型检查
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pytype/
+.pyre/
+
+# Ruff / Linting
+.ruff_cache/
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# ===== 数据库 =====
+*.db
+*.sqlite
+*.sqlite3
+fusedpen.db
+*.db-journal
+
+# ===== 向量数据库 (ChromaDB) =====
+chroma_data/
+.chroma/
+knowledge-base/.chroma/
+backend/chroma_data/
+
+# ===== IDE / 编辑器 =====
+# VSCode
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/launch.json
+
+# JetBrains (PyCharm, WebStorm)
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+
+# Visual Studio
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.user
+
+# Vim
+*.sw?
+*.swo
+Session.vim
+.netrwhist
+
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+auto-save-list/
+tramp
+
+# ===== Docker =====
+.docker/
+docker-compose.override.yml
+
+# ===== 安全敏感文件 =====
+# API Keys / Credentials
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+credentials.json
+secrets.json
+service-account*.json
+
+# SSH
+id_rsa
+id_rsa.pub
+id_ed25519
+id_ed25519.pub
+
+# ===== 项目特定 =====
+# 报告输出
+reports/
+output/
+results/
+
+# 临时文件
+tmp/
+temp/
+.tmp/
+.temp/
+
+# 日志目录
+logs/
+*.log
+
+# 工具执行输出
+/backend/tool_outputs/
+/backend/scan_results/
+
+# Alembic 迁移 (如果使用)
+# alembic/versions/*.py
+
+# 文档构建
+docs/_build/
+site/
+
+# ===== 操作系统 =====
+# Windows
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+
+# Linux
+.directory
+.Trash-*
+
+# ===== 其他 =====
+# 压缩文件 (可选，根据需要取消注释)
+# *.zip
+# *.tar.gz
+# *.rar
+
+# 缓存
+.cache/
+*.cache
+
+# Claude Code
+.claude/
+CLAUDE.md
+
+*.pyc
+
+poc_output/*
+pocs/*
+seeds/*
+
+luodllhack.yaml
+harness_*.c
+poc_*.bin
+seed_*.bin
+
+.vs/*
+*.sig

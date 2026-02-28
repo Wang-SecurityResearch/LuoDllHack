@@ -1,0 +1,263 @@
+{
+  "successful_patterns": [],
+  "failure_patterns": [
+    {
+      "timestamp": 1767203383.248276,
+      "task_type": "deep_verify",
+      "parameters": {
+        "address": 268501760,
+        "vuln_type": "DOUBLE_FREE",
+        "api": "CoTaskMemFree",
+        "delegated_from": "analyzer-1"
+      },
+      "result_summary": {
+        "success": false,
+        "findings_count": 0,
+        "execution_time": 0.002008676528930664,
+        "error": "Unknown tool: deep_verify_vulnerability"
+      },
+      "success": false,
+      "tags": [
+        "deep_verify",
+        "failure"
+      ],
+      "metadata": {}
+    },
+    {
+      "timestamp": 1767203383.248276,
+      "task_type": "deep_verify",
+      "parameters": {
+        "address": 268501640,
+        "vuln_type": "DOUBLE_FREE",
+        "api": "free",
+        "delegated_from": "analyzer-1"
+      },
+      "result_summary": {
+        "success": false,
+        "findings_count": 0,
+        "execution_time": 0.0,
+        "error": "Unknown tool: deep_verify_vulnerability"
+      },
+      "success": false,
+      "tags": [
+        "deep_verify",
+        "failure"
+      ],
+      "metadata": {}
+    },
+    {
+      "timestamp": 1767203383.2502806,
+      "task_type": "deep_verify",
+      "parameters": {
+        "address": 268501072,
+        "vuln_type": "BUFFER_OVERFLOW",
+        "api": "GetSystemDefaultLangID",
+        "delegated_from": "analyzer-1"
+      },
+      "result_summary": {
+        "success": false,
+        "findings_count": 0,
+        "execution_time": 0.0020046234130859375,
+        "error": "Unknown tool: deep_verify_vulnerability"
+      },
+      "success": false,
+      "tags": [
+        "deep_verify",
+        "failure"
+      ],
+      "metadata": {}
+    },
+    {
+      "timestamp": 1767203383.2502806,
+      "task_type": "deep_verify",
+      "parameters": {
+        "address": 268501072,
+        "vuln_type": "COMMAND_INJECTION",
+        "api": "GetSystemDefaultLangID",
+        "delegated_from": "analyzer-1"
+      },
+      "result_summary": {
+        "success": false,
+        "findings_count": 0,
+        "execution_time": 0.0,
+        "error": "Unknown tool: deep_verify_vulnerability"
+      },
+      "success": false,
+      "tags": [
+        "deep_verify",
+        "failure"
+      ],
+      "metadata": {}
+    },
+    {
+      "timestamp": 1767203383.2502806,
+      "task_type": "deep_verify",
+      "parameters": {
+        "address": 268501152,
+        "vuln_type": "BUFFER_OVERFLOW",
+        "api": "GetSystemTimeAsFileTime",
+        "delegated_from": "analyzer-1"
+      },
+      "result_summary": {
+        "success": false,
+        "findings_count": 0,
+        "execution_time": 0.0,
+        "error": "Unknown tool: deep_verify_vulnerability"
+      },
+      "success": false,
+      "tags": [
+        "deep_verify",
+        "failure"
+      ],
+      "metadata": {}
+    },
+    {
+      "timestamp": 1767203383.2502806,
+      "task_type": "deep_verify",
+      "parameters": {
+        "address": 268501152,
+        "vuln_type": "COMMAND_INJECTION",
+        "api": "GetSystemTimeAsFileTime",
+        "delegated_from": "analyzer-1"
+      },
+      "result_summary": {
+        "success": false,
+        "findings_count": 0,
+        "execution_time": 0.0,
+        "error": "Unknown tool: deep_verify_vulnerability"
+      },
+      "success": false,
+      "tags": [
+        "deep_verify",
+        "failure"
+      ],
+      "metadata": {}
+    },
+    {
+      "timestamp": 1767203383.2533572,
+      "task_type": "deep_verify",
+      "parameters": {
+        "address": 268501448,
+        "vuln_type": "DOUBLE_FREE",
+        "api": "LocalFree",
+        "delegated_from": "analyzer-1"
+      },
+      "result_summary": {
+        "success": false,
+        "findings_count": 0,
+        "execution_time": 0.0,
+        "error": "Unknown tool: deep_verify_vulnerability"
+      },
+      "success": false,
+      "tags": [
+        "deep_verify",
+        "failure"
+      ],
+      "metadata": {}
+    },
+    {
+      "timestamp": 1767203383.7573388,
+      "task_type": "verify_dangerous_api",
+      "parameters": {
+        "api": "CoTaskMemFree",
+        "vuln_type": "DOUBLE_FREE"
+      },
+      "result_summary": {
+        "success": false,
+        "findings_count": 0,
+        "execution_time": 0.0,
+        "error": "Verification failed for API CoTaskMemFree"
+      },
+      "success": false,
+      "tags": [
+        "verify_dangerous_api",
+        "failure"
+      ],
+      "metadata": {}
+    },
+    {
+      "timestamp": 1767203383.7593684,
+      "task_type": "verify_dangerous_api",
+      "parameters": {
+        "api": "memcpy",
+        "vuln_type": "BUFFER_OVERFLOW"
+      },
+      "result_summary": {
+        "success": false,
+        "findings_count": 0,
+        "execution_time": 0.0,
+        "error": "Verification failed for API memcpy"
+      },
+      "success": false,
+      "tags": [
+        "verify_dangerous_api",
+        "failure"
+      ],
+      "metadata": {}
+    },
+    {
+      "timestamp": 1767203383.7593684,
+      "task_type": "verify_dangerous_api",
+      "parameters": {
+        "api": "free",
+        "vuln_type": "DOUBLE_FREE"
+      },
+      "result_summary": {
+        "success": false,
+        "findings_count": 0,
+        "execution_time": 0.0,
+        "error": "Verification failed for API free"
+      },
+      "success": false,
+      "tags": [
+        "verify_dangerous_api",
+        "failure"
+      ],
+      "metadata": {}
+    },
+    {
+      "timestamp": 1767203383.7593684,
+      "task_type": "verify_dangerous_api",
+      "parameters": {
+        "api": "GetSystemDefaultLangID",
+        "vuln_type": "BUFFER_OVERFLOW"
+      },
+      "result_summary": {
+        "success": false,
+        "findings_count": 0,
+        "execution_time": 0.0,
+        "error": "Verification failed for API GetSystemDefaultLangID"
+      },
+      "success": false,
+      "tags": [
+        "verify_dangerous_api",
+        "failure"
+      ],
+      "metadata": {}
+    },
+    {
+      "timestamp": 1767203383.7593684,
+      "task_type": "verify_dangerous_api",
+      "parameters": {
+        "api": "GetSystemDefaultLangID",
+        "vuln_type": "COMMAND_INJECTION"
+      },
+      "result_summary": {
+        "success": false,
+        "findings_count": 0,
+        "execution_time": 0.0,
+        "error": "Verification failed for API GetSystemDefaultLangID"
+      },
+      "success": false,
+      "tags": [
+        "verify_dangerous_api",
+        "failure"
+      ],
+      "metadata": {}
+    }
+  ],
+  "tool_usage_stats": {},
+  "learned_heuristics": [],
+  "false_positive_features": [],
+  "true_positive_features": []
+}

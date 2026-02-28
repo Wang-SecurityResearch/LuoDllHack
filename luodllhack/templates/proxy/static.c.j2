@@ -1,0 +1,120 @@
+// =============================================================================
+// Auto-generated Proxy DLL for {{ dll_name }}.dll
+// Architecture: {{ arch }}
+// Generated: {{ timestamp }}
+// =============================================================================
+
+#include <windows.h>
+
+// -----------------------------------------------------------------------------
+// Safe Load Flags (Windows 8+ compatibility)
+// -----------------------------------------------------------------------------
+#ifndef LOAD_LIBRARY_SEARCH_SYSTEM32
+#define LOAD_LIBRARY_SEARCH_SYSTEM32 0x00000800
+#endif
+
+// -----------------------------------------------------------------------------
+// Configuration
+// -----------------------------------------------------------------------------
+#define ORIG_DLL_NAME L"{{ dll_name }}_orig.dll"
+
+// -----------------------------------------------------------------------------
+// Global State
+// -----------------------------------------------------------------------------
+static HMODULE g_hOriginalDll = NULL;
+static BOOL    g_bInitialized = FALSE;
+
+// -----------------------------------------------------------------------------
+// Export Forwarding
+// -----------------------------------------------------------------------------
+{% for exp in exports %}
+{% if exp.is_named %}
+#pragma comment(linker, "/EXPORT:{{ exp.name }}={{ orig_dll }}.{{ exp.name }}{% if exp.ordinal %},@{{ exp.ordinal }}{% endif %}{% if exp.is_data %},DATA{% endif %}")
+{% else %}
+#pragma comment(linker, "/EXPORT:__exp_ord_{{ exp.ordinal }}={{ orig_dll }}.#{{ exp.ordinal }},@{{ exp.ordinal }},NONAME{% if exp.is_data %},DATA{% endif %}")
+{% endif %}
+{% endfor %}
+
+// =============================================================================
+// Payload Hooks - Customize here
+// =============================================================================
+
+static BOOL OnProxyAttach(HMODULE hModule)
+{
+    // TODO: Add your initialization code
+    // Example: Start thread, hook functions, etc.
+    return TRUE;
+}
+
+static void OnProcessAttach(void)
+{
+    // TODO: Per-process initialization
+}
+
+static void OnProxyDetach(void)
+{
+    // TODO: Cleanup code
+}
+
+// =============================================================================
+// Safe DLL Loading
+// =============================================================================
+
+static HMODULE LoadOriginalDllSecurely(void)
+{
+    HMODULE hDll = NULL;
+    wchar_t sysPath[MAX_PATH];
+
+    // Method 1: Load from System32 (Windows 8+)
+    hDll = LoadLibraryExW(L"{{ dll_name }}.dll", NULL, LOAD_LIBRARY_SEARCH_SYSTEM32);
+    if (hDll) return hDll;
+
+    // Method 2: Build absolute System32 path (legacy Windows)
+    if (GetSystemDirectoryW(sysPath, MAX_PATH) > 0) {
+        wcscat_s(sysPath, MAX_PATH, L"\\{{ dll_name }}.dll");
+        hDll = LoadLibraryW(sysPath);
+        if (hDll) return hDll;
+    }
+
+    // Method 3: Try _orig version in same directory
+    hDll = LoadLibraryW(ORIG_DLL_NAME);
+
+    return hDll;
+}
+
+// =============================================================================
+// DLL Entry Point
+// =============================================================================
+
+BOOL APIENTRY DllMain(HMODULE hModule, DWORD dwReason, LPVOID lpReserved)
+{
+    (void)lpReserved;
+
+    switch (dwReason) {
+    case DLL_PROCESS_ATTACH:
+        DisableThreadLibraryCalls(hModule);
+
+        if (!OnProxyAttach(hModule)) {
+            return FALSE;
+        }
+
+        g_hOriginalDll = LoadOriginalDllSecurely();
+
+        if (g_hOriginalDll) {
+            g_bInitialized = TRUE;
+            OnProcessAttach();
+        }
+        break;
+
+    case DLL_PROCESS_DETACH:
+        OnProxyDetach();
+        if (g_hOriginalDll) {
+            FreeLibrary(g_hOriginalDll);
+            g_hOriginalDll = NULL;
+        }
+        g_bInitialized = FALSE;
+        break;
+    }
+
+    return g_hOriginalDll != NULL || dwReason == DLL_PROCESS_DETACH;
+}

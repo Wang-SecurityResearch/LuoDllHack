@@ -1,0 +1,275 @@
+/*
+ * LuoDllHack COM Fuzzing Harness
+ *
+ * Target DLL: {{ dll_path }}
+ * Target Function: {{ func_name }}
+ * Vulnerability Type: {{ vuln_type }}
+ *
+ * Build:
+ *   cl /O2 harness_com_{{ func_name }}.c ole32.lib oleaut32.lib /Fe:harness.exe
+ *
+ * Usage:
+ *   harness.exe <input_file>
+ */
+
+#include <windows.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <objbase.h>
+#include <initguid.h>
+
+#pragma comment(lib, "ole32.lib")
+#pragma comment(lib, "oleaut32.lib")
+
+// =============================================================================
+// Configuration (from analysis)
+// =============================================================================
+
+#define DLL_PATH      L"{{ dll_path }}"
+#define FUNC_NAME     "{{ func_name }}"
+#define MAX_INPUT     65536
+
+{% if clsid %}
+// Target CLSID (discovered by analysis)
+DEFINE_GUID(CLSID_Target,
+    {{ clsid }});
+{% endif %}
+
+{% if iid %}
+// Target IID (discovered by analysis)
+DEFINE_GUID(IID_Target,
+    {{ iid }});
+{% endif %}
+
+// =============================================================================
+// COM Interface Definitions
+// =============================================================================
+
+{% if interface_def %}
+{{ interface_def }}
+{% else %}
+// Generic target interface vtable
+typedef struct ITargetVtbl {
+    // IUnknown (index 0-2)
+    HRESULT (STDMETHODCALLTYPE *QueryInterface)(void* This, REFIID riid, void** ppvObject);
+    ULONG (STDMETHODCALLTYPE *AddRef)(void* This);
+    ULONG (STDMETHODCALLTYPE *Release)(void* This);
+    // Target methods (index 3+)
+    HRESULT (STDMETHODCALLTYPE *Method0)(void* This, void* arg1, void* arg2, void* arg3);
+    HRESULT (STDMETHODCALLTYPE *Method1)(void* This, void* arg1, void* arg2, void* arg3);
+} ITargetVtbl;
+
+typedef struct ITarget {
+    ITargetVtbl* lpVtbl;
+} ITarget;
+{% endif %}
+
+// =============================================================================
+// Global State
+// =============================================================================
+
+static HMODULE g_hDll = NULL;
+static ITarget* g_pTarget = NULL;
+static BOOL g_bComInitialized = FALSE;
+
+// =============================================================================
+// COM Initialization
+// =============================================================================
+
+typedef HRESULT (WINAPI *PFN_DllGetClassObject)(REFCLSID rclsid, REFIID riid, LPVOID* ppv);
+typedef HRESULT (WINAPI *PFN_CreateObject)(const GUID* clsid, const GUID* iid, void** outObject);
+
+static const char* HResultToString(HRESULT hr) {
+    switch (hr) {
+        case S_OK: return "S_OK";
+        case E_NOINTERFACE: return "E_NOINTERFACE";
+        case E_FAIL: return "E_FAIL";
+        case E_INVALIDARG: return "E_INVALIDARG";
+        case E_OUTOFMEMORY: return "E_OUTOFMEMORY";
+        case CLASS_E_CLASSNOTAVAILABLE: return "CLASS_E_CLASSNOTAVAILABLE";
+        case REGDB_E_CLASSNOTREG: return "REGDB_E_CLASSNOTREG";
+        default: return "UNKNOWN";
+    }
+}
+
+{% raw %}
+static void PrintGUID(const GUID* guid) {
+    printf("{%08lX-%04X-%04X-%02X%02X-%02X%02X%02X%02X%02X%02X}",
+        guid->Data1, guid->Data2, guid->Data3,
+        guid->Data4[0], guid->Data4[1], guid->Data4[2], guid->Data4[3],
+        guid->Data4[4], guid->Data4[5], guid->Data4[6], guid->Data4[7]);
+}
+{% endraw %}
+
+static HRESULT InitCOM(void) {
+    HRESULT hr = E_FAIL;
+
+{% if clsid and iid %}
+    // Method 1: CoCreateInstance (for registered COM)
+    printf("[*] Trying CoCreateInstance...\n");
+    hr = CoInitializeEx(NULL, COINIT_MULTITHREADED);
+    if (SUCCEEDED(hr) || hr == RPC_E_CHANGED_MODE) {
+        g_bComInitialized = TRUE;
+        hr = CoCreateInstance(&CLSID_Target, NULL, CLSCTX_INPROC_SERVER, &IID_Target, (void**)&g_pTarget);
+        if (SUCCEEDED(hr)) {
+            printf("[+] CoCreateInstance succeeded\n");
+            return hr;
+        }
+        printf("[-] CoCreateInstance failed: 0x%08X (%s)\n", hr, HResultToString(hr));
+    }
+
+    // Method 2: DllGetClassObject
+    PFN_DllGetClassObject pfnGetClassObject = (PFN_DllGetClassObject)GetProcAddress(g_hDll, "DllGetClassObject");
+    if (pfnGetClassObject) {
+        printf("[*] Trying DllGetClassObject...\n");
+        IClassFactory* pFactory = NULL;
+        hr = pfnGetClassObject(&CLSID_Target, &IID_IClassFactory, (void**)&pFactory);
+        if (SUCCEEDED(hr)) {
+            hr = pFactory->lpVtbl->CreateInstance(pFactory, NULL, &IID_Target, (void**)&g_pTarget);
+            pFactory->lpVtbl->Release(pFactory);
+            if (SUCCEEDED(hr)) {
+                printf("[+] DllGetClassObject succeeded\n");
+                return hr;
+            }
+        }
+        printf("[-] DllGetClassObject failed: 0x%08X (%s)\n", hr, HResultToString(hr));
+    }
+
+    // Method 3: CreateObject (non-standard)
+    PFN_CreateObject pfnCreateObject = (PFN_CreateObject)GetProcAddress(g_hDll, "CreateObject");
+    if (pfnCreateObject) {
+        printf("[*] Trying CreateObject...\n");
+        hr = pfnCreateObject(&CLSID_Target, &IID_Target, (void**)&g_pTarget);
+        if (SUCCEEDED(hr)) {
+            printf("[+] CreateObject succeeded\n");
+            return hr;
+        }
+        printf("[-] CreateObject failed: 0x%08X (%s)\n", hr, HResultToString(hr));
+    }
+{% else %}
+    // No CLSID/IID discovered - cannot initialize COM object
+    printf("[!] Error: No CLSID/IID available.\n");
+    printf("[!] The analysis phase did not discover valid COM GUIDs.\n");
+    printf("[!] Please manually specify CLSID and IID in this file.\n");
+    hr = E_NOTIMPL;
+{% endif %}
+
+    return hr;
+}
+
+// =============================================================================
+// Fuzzing Target
+// =============================================================================
+
+__declspec(dllexport)
+int fuzz_target(const char* data, int size) {
+    HRESULT hr;
+
+    if (!g_pTarget || size <= 0) return 0;
+
+    __try {
+        // Call target method through vtable
+        // TODO: Adjust method index and parameters based on actual interface
+        hr = g_pTarget->lpVtbl->Method0(g_pTarget, (void*)data, (void*)(size_t)size, NULL);
+
+        if (FAILED(hr)) {
+            // Not necessarily an error - COM methods often return error codes
+        }
+    }
+    __except(EXCEPTION_EXECUTE_HANDLER) {
+        DWORD code = GetExceptionCode();
+        printf("[!] CRASH: Exception 0x%08X\n", code);
+        return 1;
+    }
+
+    return 0;
+}
+
+// =============================================================================
+// Main
+// =============================================================================
+
+int wmain(int argc, wchar_t* argv[]) {
+    HRESULT hr;
+    FILE* fp = NULL;
+    char* input = NULL;
+    long inputSize = 0;
+
+    printf("============================================================\n");
+    printf("[*] LuoDllHack COM Fuzzing Harness\n");
+    printf("[*] Target: %S\n", DLL_PATH);
+    printf("[*] Function: %s\n", FUNC_NAME);
+{% if clsid %}
+    printf("[*] CLSID: "); PrintGUID(&CLSID_Target); printf("\n");
+{% endif %}
+{% if iid %}
+    printf("[*] IID:   "); PrintGUID(&IID_Target); printf("\n");
+{% endif %}
+    printf("============================================================\n\n");
+
+    if (argc < 2) {
+        printf("Usage: %S <input_file>\n", argv[0]);
+        return 1;
+    }
+
+    // Load DLL
+    g_hDll = LoadLibraryW(DLL_PATH);
+    if (!g_hDll) {
+        printf("[-] Failed to load DLL: %lu\n", GetLastError());
+        return 1;
+    }
+    printf("[+] DLL loaded at %p\n", g_hDll);
+
+    // Initialize COM object
+    hr = InitCOM();
+    if (FAILED(hr) || !g_pTarget) {
+        printf("[-] Failed to create COM object: 0x%08X\n", hr);
+        goto cleanup;
+    }
+    printf("[+] COM object at %p, vtable at %p\n", g_pTarget, g_pTarget->lpVtbl);
+
+    // Read input file
+    fp = _wfopen(argv[1], L"rb");
+    if (!fp) {
+        printf("[-] Failed to open: %S\n", argv[1]);
+        goto cleanup;
+    }
+
+    fseek(fp, 0, SEEK_END);
+    inputSize = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
+
+    if (inputSize > MAX_INPUT) inputSize = MAX_INPUT;
+
+    input = (char*)malloc(inputSize + 1);
+    if (!input) {
+        printf("[-] Memory allocation failed\n");
+        fclose(fp);
+        goto cleanup;
+    }
+
+    fread(input, 1, inputSize, fp);
+    input[inputSize] = 0;
+    fclose(fp);
+
+    printf("[*] Input: %S (%ld bytes)\n", argv[1], inputSize);
+    printf("[*] Fuzzing...\n\n");
+
+    int result = fuzz_target(input, (int)inputSize);
+    printf("\n[*] Result: %d (%s)\n", result, result ? "CRASH" : "OK");
+
+    free(input);
+
+cleanup:
+    if (g_pTarget) {
+        ((IUnknown*)g_pTarget)->lpVtbl->Release((IUnknown*)g_pTarget);
+    }
+    if (g_bComInitialized) {
+        CoUninitialize();
+    }
+    if (g_hDll) {
+        FreeLibrary(g_hDll);
+    }
+
+    return 0;
+}

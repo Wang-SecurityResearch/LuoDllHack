@@ -1,0 +1,26 @@
+{% extends "poc/base.py.j2" %}
+
+{% block description %}Information disclosure vulnerability{% endblock %}
+
+{% block payload %}
+# Allocate buffer to receive leaked data
+output_buf = ctypes.create_string_buffer(4096)
+{% endblock %}
+
+{% block exploit_doc %}Trigger information disclosure{% endblock %}
+
+{% block exploit_body %}
+        print("[*] Calling function to trigger info leak...")
+
+        result = func(output_buf, 4096)
+
+        # Check for leaked data
+        leaked = output_buf.raw
+        if leaked:
+            print(f"[*] Received {len(leaked)} bytes")
+            print("[*] First 64 bytes:")
+            for i in range(0, min(64, len(leaked)), 16):
+                hex_str = ' '.join(f'{b:02x}' for b in leaked[i:i+16])
+                ascii_str = ''.join(chr(b) if 32 <= b < 127 else '.' for b in leaked[i:i+16])
+                print(f"    {i:04x}: {hex_str}  {ascii_str}")
+{% endblock %}

